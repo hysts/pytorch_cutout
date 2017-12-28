@@ -1,5 +1,7 @@
 # PyTorch Implementation of Cutout
 
+![](figures/sample.png)
+
 ## Usage
 
 ```
