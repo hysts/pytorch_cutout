@@ -13,7 +13,6 @@ import random
 
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
 import torch.optim
 import torch.utils.data
 import torch.backends.cudnn
@@ -54,8 +53,8 @@ def parse_args():
     parser.add_argument('--base_channels', type=int, default=16)
     parser.add_argument('--remove_first_relu', type=str2bool, default=True)
     parser.add_argument('--add_last_bn', type=str2bool, default=True)
-    parser.add_argument('--preact_stage', type=str,
-                        default='[true, false, false]')
+    parser.add_argument(
+        '--preact_stage', type=str, default='[true, false, false]')
 
     # cutout
     parser.add_argument('--use_cutout', action='store_true', default=False)
@@ -176,8 +175,8 @@ def train(epoch, model, optimizer, criterion, train_loader, run_config,
                 data, normalize=True, scale_each=True)
             writer.add_image('Train/Image', image, epoch)
 
-        data = Variable(data.cuda())
-        targets = Variable(targets.cuda())
+        data = data.cuda()
+        targets = targets.cuda()
 
         optimizer.zero_grad()
 
@@ -189,8 +188,8 @@ def train(epoch, model, optimizer, criterion, train_loader, run_config,
 
         _, preds = torch.max(outputs, dim=1)
 
-        loss_ = loss.data[0]
-        correct_ = preds.eq(targets).cpu().sum().data.numpy()[0]
+        loss_ = loss.item()
+        correct_ = preds.eq(targets).sum().item()
         num = data.size(0)
 
         accuracy = correct_ / num
@@ -238,16 +237,17 @@ def test(epoch, model, criterion, test_loader, run_config, writer):
                 data, normalize=True, scale_each=True)
             writer.add_image('Test/Image', image, epoch)
 
-        data = Variable(data.cuda(), volatile=True)
-        targets = Variable(targets.cuda(), volatile=True)
+        data = data.cuda()
+        targets = targets.cuda()
 
-        outputs = model(data)
+        with torch.no_grad():
+            outputs = model(data)
         loss = criterion(outputs, targets)
 
         _, preds = torch.max(outputs, dim=1)
 
-        loss_ = loss.data[0]
-        correct_ = preds.eq(targets).cpu().sum().data.numpy()[0]
+        loss_ = loss.item()
+        correct_ = preds.eq(targets).sum().item()
         num = data.size(0)
 
         loss_meter.update(loss_, num)
@@ -302,9 +302,8 @@ def main():
         json.dump(config, fout, indent=2)
 
     # data loaders
-    train_loader, test_loader = get_loader(optim_config['batch_size'],
-                                           run_config['num_workers'],
-                                           data_config)
+    train_loader, test_loader = get_loader(
+        optim_config['batch_size'], run_config['num_workers'], data_config)
 
     # model
     model = load_model(config['model_config'])
